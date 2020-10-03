@@ -32,22 +32,44 @@ def route_request(request)
 end
 
 def file_response(file_path)
-  if File.exist?(file_path)
-    data = File.read(file_path)
-    Response.new(code: 200, data: data)
-  else 
-    Response.new(code: 404, data: "File not found")
+  unless File.exist?(file_path)
+    return Response.new(code: 404, data: "File not found")
+  end 
+
+  unless File.readable?(file_path)
+    return Response.new(code: 403, data: "Forbidden")
   end
+
+  unless check_root_path?(file_path)
+    return Response.new(code: 403, data: "Permission denied")
+  end 
+
+  data = File.read(file_path)
+  Response.new(code: 200, data: data)
 end
 
 def dir_response(dir_path)
-  if File.exist?(dir_path)
-    data = `ls -la #{dir_path}`
-    Response.new(code: 200, data: data)
-  else 
-    Response.new(code: 404, data: "Directory doesn't exist")
+  unless File.exist?(dir_path)
+    return Response.new(code: 404, data: "Directory doesn't exist")
   end
+
+  unless File.readable?(dir_path)
+    Response.new(code: 403, data: "Forbidden") 
+  end
+
+  unless check_root_path?(dir_path)
+    return Response.new(code: 403, data: "Permission denied")
+  end 
+
+  data = `ls -la #{dir_path}`
+  Response.new(code: 200, data: data)
 end
+
+def check_root_path?(target_path)
+  expanded_target_path = File.expand_path(target_path)
+  expanded_current_path = File.expand_path('.')
+  expanded_target_path.start_with?(expanded_current_path)
+end 
 
 def handle_connection(client)
   puts "Getting new client #{client}"
